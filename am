@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AM预设联系查询</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #0F2027 0%, #203A43 25%, #2C5364 50%, #485B7A 75%, #A18CD1 100%);
+    min-height: 100vh;
+    padding: 20px;
+    position: relative;
+    overflow-x: hidden;
+}
+/* 动态背景气泡 */
+.bg-bubble {
+    position: fixed;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    animation: float 20s infinite ease-in-out;
+    z-index: 0;
+}
+.bg-bubble:nth-child(1) { width: 300px; height: 300px; top: -100px; left: -100px; animation-delay: 0s; }
+.bg-bubble:nth-child(2) { width: 200px; height: 200px; top: 50%; right: -50px; animation-delay: -5s; }
+.bg-bubble:nth-child(3) { width: 250px; height: 250px; bottom: -80px; left: 30%; animation-delay: -10s; }
+.bg-bubble:nth-child(4) { width: 180px; height: 180px; top: 20%; left: 60%; animation-delay: -15s; }
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    33% { transform: translateY(-30px) rotate(120deg); }
+    66% { transform: translateY(30px) rotate(240deg); }
+}
+
+/* Shimmer 反光扫过动画 */
+@keyframes shimmer {
+    0% { transform: translateX(-100%) skewX(-15deg); }
+    100% { transform: translateX(200%) skewX(-15deg); }
+}
+.shimmer-effect {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+    animation: shimmer 4s infinite ease-in-out;
+    pointer-events: none;
+    border-radius: inherit;
+}
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+.header h1 {
+    color: white;
+    font-size: 36px;
+    margin-bottom: 10px;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    letter-spacing: 2px;
+}
+.header p {
+    color: rgba(255,255,255,0.9);
+    font-size: 16px;
+    font-weight: 300;
+}
+/* 液态玻璃搜索框 */
+.search-box {
+    background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 
+        0 8px 32px rgba(0,0,0,0.1),
+        inset 0 1px 0 rgba(255,255,255,0.4),
+        inset 0 -1px 0 rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+    position: relative;
+    overflow: hidden;
+}
+.search-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 50%);
+    pointer-events: none;
+    border-radius: 24px;
+}
+.search-input {
+    width: 100%;
+    padding: 16px 20px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+    font-size: 16px;
+    outline: none;
+    transition: all 0.3s;
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+.search-input::placeholder { color: rgba(255,255,255,0.6); }
+.search-input:focus {
+    border-color: rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.3);
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.1);
+}
+.stats {
+    color: rgba(255,255,255,0.8);
+    font-size: 14px;
+    margin-top: 12px;
+    text-align: right;
+    font-weight: 500;
+}
+/* 联系人列表 */
+.contact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+/* 液态玻璃卡片 */
+.contact-card {
+    background: rgba(255,255,255,0.25);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 
+        0 8px 32px rgba(0,0,0,0.1),
+        inset 0 1px 0 rgba(255,255,255,0.4),
+        inset 0 -1px 0 rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    overflow: hidden;
+}
+.contact-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 50%);
+    pointer-events: none;
+    border-radius: 24px;
+}
+.contact-card::after {
+    content: '';
+    position: absolute;
+    top: 55%;
+    left: 0;
+    right: 0;
+    height: 45%;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 100%);
+    pointer-events: none;
+    border-radius: 0 0 24px 24px;
+}
+.contact-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 
+        0 16px 48px rgba(0,0,0,0.15),
+        inset 0 1px 0 rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.35);
+}
+.contact-card-group:hover {
+    background: rgba(255,255,255,0.4) !important;
+}
+.contact-card:active {
+    transform: translateY(-2px) scale(1.01);
+}
+.avatar {
+     width: 64px;
+     height: 64px;
+     border-radius: 50%;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     color: white;
+     font-size: 28px;
+     font-weight: bold;
+     flex-shrink: 0;
+     border: 2px solid rgba(255,255,255,0.5);
+     box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+     overflow: hidden;
+     background: linear-gradient(135deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1));
+ }
+ .avatar img {
+     width: 100%;
+     height: 100%;
+     object-fit: cover;
+     border-radius: 50%;
+ }
+ .avatar-fallback {
+     width: 100%;
+     height: 100%;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+ }
+.contact-info { flex: 1; min-width: 0; }
+.contact-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 6px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.contact-qq {
+    font-size: 15px;
+    color: rgba(255,255,255,0.8);
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+}
+.contact-action {
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    background: rgba(255,255,255,0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.3);
+    transition: all 0.3s;
+}
+.contact-card:hover .contact-action {
+    background: rgba(255,255,255,0.35);
+    transform: scale(1.05);
+}
+.no-result {
+    text-align: center;
+    padding: 80px 20px;
+    color: white;
+}
+.no-result h3 { 
+    font-size: 28px; 
+    margin-bottom: 12px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.2);
+}
+.no-result p { 
+    font-size: 16px; 
+    opacity: 0.8;
+}
+/* 复制按钮样式 */
+.copy-btn {
+    position: relative;
+    cursor: pointer;
+}
+.copy-btn.copied {
+    color: #4ade80;
+}
+
+/* 复制成功提示 */
+.copy-toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    z-index: 9999;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+}
+.copy-toast.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* 热门标签样式 */
+.hot-tag {
+    background: linear-gradient(135deg, #333, #000);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    margin-left: 10px;
+    box-shadow: 0 2px 8px rgba(238,90,36,0.4);
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+/* 特殊标签样式已移除 */
+/* 分组标题 */
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    margin: 24px 0 12px 0;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+/* 搜索提示卡片 - 丝滑动画版 */
+.hint-card {
+    text-align: center;
+    margin-top: 16px;
+    padding: 0 20px;
+    color: rgba(255,255,255,0.6);
+    font-size: 12px;
+    line-height: 1.8;
+    transition: opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                margin 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                letter-spacing 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    opacity: 1;
+    transform: translateY(0);
+    margin-bottom: 16px;
+    letter-spacing: 0.3px;
+}
+.hint-card.hint-hidden {
+    opacity: 0;
+    transform: translateY(-16px);
+    margin-top: 0;
+    margin-bottom: 0;
+    pointer-events: none;
+    letter-spacing: 0.8px;
+}
+
+.section-count {
+    font-size: 14px;
+    font-weight: 400;
+    opacity: 0.75;
+    background: rgba(255,255,255,0.15);
+    padding: 2px 10px;
+    border-radius: 12px;
+}
+</style>
+</head>
+<body>
+    <div class="container">
+    <div class="header">
+        <h1>AM预设联系查询</h1>
+        <p>快速查询，直接拉起跳转，无需手动输入</p>
+        <p id="currentTime" style="font-size: 12px; opacity: 0.6; margin-top: 8px;"></p>
+    </div>
+     <div id="searchHint" class="hint-card">
+         网页由逝秋水和Step-3.5Flash AI共同制作 | 液态玻璃风格为游龙开源 | <span style="color: rgba(255,100,100,0.8);">⚠️ 注意：网页拉起存在误差，联系可能失效</span>
+     </div>
+    <div class="search-box">
+        <div class="shimmer-effect"></div>
+        <input type="text" class="search-input" id="searchInput" placeholder="快速查询，可直接输入名字" autocomplete="off">
+        <div class="stats" id="stats">共 0 位预设po的联系</div>
+    </div>
+     <div class="section-title section-title-group" id="groupSection">
+         群聊添加
+        <span class="section-count" id="groupCount">(0)</span>
+    </div>
+    <div class="contact-list" id="groupList"></div>
+    <div class="section-title" id="friendSection">
+        好友添加
+        <span class="section-count" id="friendCount">(0)</span>
+    </div>
+    <div class="contact-list" id="friendList"></div>
+</div>
+
+<div class="footer" style="text-align: center; margin-top: 40px; padding: 20px; color: rgba(255,255,255,0.6); font-size: 12px; line-height: 1.8;">
+    此网页由逝秋水和Step-3.5Flash AI模型共同制作 | 液态玻璃风格为游龙开源<br>
+    <span style="color: rgba(255,100,100,0.8);">⚠️ 注意：网页拉起存在误差，联系可能已失效</span>
+</div>
+
+<script>
+const surnames = '赵钱孙李周吴郑王冯陈褚卫蒋沈韩杨朱秦尤许何吕施张孔曹严华金魏陶姜戚谢邹喻柏水窦章云苏潘葛奚范彭郎鲁韦昌马苗凤花方俞任袁柳酆鲍史唐费廉岑薛雷贺倪汤滕殷罗毕郝邬安常乐于时傅皮卞齐康伍余元卜顾孟平黄和穆萧尹姚邵湛汪祁毛禹狄米贝明臧计伏成戴谈宋茅庞熊纪舒屈项祝董梁杜阮蓝闵席季麻强贾路娄危江童颜郭梅盛林刁钟徐邱骆高夏蔡田樊胡凌霍万柯卢莫房缪干解应宗丁宣贲邓郁单杭洪包诸左石崔吉钮龚';
+const names = '伟刚勇毅俊峰强军平保东文辉力明永健世广志义兴良海山仁波宁贵福生龙元全国胜学祥才发武新利清飞彬富顺信子杰涛昌成康星光天达安岩中茂进林有坚和彪博诚先敬震振壮会思群豪心邦承乐绍功松善厚庆磊民友裕河哲江超浩亮政谦亨奇固之轮翰朗伯宏言若鸣朋斌梁栋维启克伦翔旭鹏泽晨辰士以建致树炎德行时泰盛雄琛钧冠策腾楠榕风航弘';
+
+function randomName() {
+    const surname = surnames[Math.floor(Math.random() * surnames.length)];
+    const isDouble = Math.random() > 0.5;
+    let name = surname;
+    if (isDouble) name += names[Math.floor(Math.random() * names.length)];
+    name += names[Math.floor(Math.random() * names.length)];
+    return name;
+}
+function randomQQ() {
+    let qq = '';
+    for (let i = 0; i < 9; i++) qq += Math.floor(Math.random() * 10);
+    return qq;
+}
+const contacts = [
+    { name: 'Rnik', qq: '1544943439', type: 'friend', avatarUrl: '' },
+    { name: '萌', qq: '2285584750', type: 'friend', avatarUrl: '' },
+    { name: '句句', qq: '2565742163', type: 'friend', avatarUrl: '' },
+    { name: '零度', qq: '2166609383', type: 'friend', avatarUrl: '' },
+    { name: '叶毕', qq: '1576575270', type: 'friend', avatarUrl: '' },
+    { name: '紫絮', qq: '853619797', type: 'friend', avatarUrl: '' },
+    { name: '王木木', qq: '810921037', type: 'friend', avatarUrl: '' },
+    { name: '祁可衣', qq: '2171429697', type: 'friend', avatarUrl: '' },
+    { name: '时栖', qq: '2872056855', type: 'friend', avatarUrl: '' },
+    { name: '勿忘', qq: '3277805467', type: 'friend', avatarUrl: '' },
+    { name: '岚', qq: '3541494887', type: 'friend', avatarUrl: '' },
+    { name: '江致', qq: '1840622714', type: 'friend', avatarUrl: '' },
+    { name: '小鱼', qq: '2366508047', type: 'friend', avatarUrl: '' },
+    { name: '无过', qq: '1467163881', type: 'friend', avatarUrl: '' },
+    { name: '霁年', qq: '3577982687', type: 'friend', avatarUrl: '' },
+    { name: '小雁', qq: '754914055', type: 'friend', avatarUrl: '' },
+    { name: '圈圈', qq: '385265565', type: 'friend', avatarUrl: '' },
+    { name: '迦轲', qq: '2639333729', type: 'friend', avatarUrl: '' },
+    { name: '江羡', qq: '3596314525', type: 'friend', avatarUrl: '' },
+    { name: 'たぶん', qq: '3666489830', type: 'friend', avatarUrl: '' },
+    { name: '林桉笙', qq: '1930633235', type: 'friend', avatarUrl: '' },
+    { name: '饼干', qq: '548777272', type: 'friend', avatarUrl: '' },
+    { name: '小卓', qq: '864834281', type: 'friend', avatarUrl: '' },
+    { name: '无骨', qq: '3881472780', type: 'friend', avatarUrl: '' },
+    { name: '白板儿', qq: '2312444583', type: 'friend', avatarUrl: '' },
+    { name: '瑜圆', qq: '152793024', type: 'friend', avatarUrl: '' },
+    { name: '萧清绾', qq: '3068354153', type: 'friend', avatarUrl: '' },
+    { name: '胡同', qq: '672855990', type: 'group', avatarUrl: '' },
+    { name: '岚宇', qq: '1087651576', type: 'group', avatarUrl: '' },
+    { name: '时萱', qq: '895024355', type: 'group', avatarUrl: '' },
+    { name: '氧化锌', qq: '328084201', type: 'group', avatarUrl: '' },
+    { name: '茶教', qq: '604826531', type: 'group', avatarUrl: '' },
+    { name: '龙芙', qq: '2457646546', type: 'friend', avatarUrl: '' },
+    { name: '小林儿', qq: '3302800859', type: 'friend', avatarUrl: '' },
+    { name: '璃雪', qq: '2476713818', type: 'friend', avatarUrl: '' },
+    { name: '姜嘢', qq: '2127207145', type: 'friend', avatarUrl: '' },
+    { name: '楠卿', qq: '3908949369', type: 'friend', avatarUrl: '' },
+    { name: '洛奈', qq: '3680125862', type: 'friend', avatarUrl: '' },
+    { name: '小若', qq: '1633763373', type: 'friend', avatarUrl: '' },
+    { name: '祁安', qq: '3523692951', type: 'friend', avatarUrl: '' },
+    { name: '小妮', qq: '2927373772', type: 'friend', avatarUrl: '' },
+    { name: '星辞', qq: '2890489528', type: 'friend', avatarUrl: '' },
+    { name: '仇音', qq: '2909677543', type: 'friend', avatarUrl: '' },
+    { name: '阿年', qq: '3793531086', type: 'friend', avatarUrl: '' },
+    { name: '十尾猫', qq: '2281674653', type: 'friend', avatarUrl: '' },
+    { name: '07', qq: '3647948892', type: 'friend', avatarUrl: '' },
+    { name: '27', qq: '3787740949', type: 'friend', avatarUrl: '' },
+    { name: '小风', qq: '3184034296', type: 'friend', avatarUrl: '' },
+    { name: '挽风', qq: '3040635753', type: 'friend', avatarUrl: '' },
+    { name: '佚迁', qq: '3580262577', type: 'friend', avatarUrl: '' },
+    { name: '雅婷', qq: '172002201', type: 'friend', avatarUrl: '' },
+    { name: '江南', qq: '1019730294', type: 'friend', avatarUrl: '' },
+    { name: '拾遗', qq: '1224793865', type: 'friend', avatarUrl: '' },
+    { name: '以泪', qq: '2890425386', type: 'friend', avatarUrl: '' },
+    { name: '小离', qq: '3900719623', type: 'friend', avatarUrl: '' },
+    { name: '诗亦', qq: '3641700049', type: 'friend', avatarUrl: '' },
+    { name: '酒柒Alight_97', qq: '', type: 'friend', avatarUrl: '' },
+    { name: '殊御', qq: '1391303284', type: 'friend', avatarUrl: '' },
+    { name: '迟子', qq: '2826978858', type: 'friend', avatarUrl: '' },
+    { name: '渔ksqwe696969_', qq: '', type: 'friend', avatarUrl: '' },
+    { name: '鲢俞', qq: '2242269030', type: 'friend', avatarUrl: '' },
+    { name: '玟', qq: '955135519', type: 'friend', avatarUrl: '' },
+    { name: '萱', qq: '3816979174', type: 'friend', avatarUrl: '' },
+    { name: '恩', qq: '2535341950', type: 'friend', avatarUrl: '' },
+    { name: '川森', qq: '3884114975', type: 'friend', avatarUrl: '' },
+    { name: '琛琛', qq: '2581949840', type: 'friend', avatarUrl: '' },
+    { name: '温卷猫', qq: '3695432830', type: 'friend', avatarUrl: '' },
+    { name: '川决', qq: '1047485946', type: 'friend', isHot: true, avatarUrl: '' },
+    { name: '牢饼', qq: '732512405', type: 'friend', avatarUrl: '' },
+    { name: '秋杓', qq: '349795360', type: 'friend', avatarUrl: '' },
+    { name: '屿迁', qq: '1643496673', type: 'friend', avatarUrl: '' },
+    { name: '小伪', qq: '3087974026', type: 'friend', avatarUrl: '' },
+    { name: '小玟', qq: '3590704419', type: 'friend', avatarUrl: '' },
+    { name: '祈念', qq: '2284427583', type: 'friend', avatarUrl: '' },
+    { name: '沈叶', qq: '1467635905', type: 'friend', avatarUrl: '' },
+    { name: 'pp', qq: '3538064796', type: 'friend', avatarUrl: '' },
+    { name: '京卜泪', qq: '2017361579', type: 'friend', avatarUrl: '' },
+    { name: '千代澈子', qq: '1270680696', type: 'friend', avatarUrl: '' },
+    { name: '歆瑶', qq: '3454376263', type: 'friend', avatarUrl: '' },
+    { name: '小嘉', qq: '1208534657', type: 'friend', avatarUrl: '' },
+    { name: 'kk', qq: '2782547445', type: 'friend', avatarUrl: '' },
+    { name: '小皖', qq: '3214684188', type: 'friend', avatarUrl: '' },
+    { name: '猫鹤', qq: '3272183304', type: 'friend', avatarUrl: '' },
+    { name: '小强', qq: '3298104426', type: 'friend', avatarUrl: '' },
+    { name: '小妤', qq: '390537825', type: 'friend', avatarUrl: '' },
+    { name: '昭昭', qq: '2417173780', type: 'friend', avatarUrl: '' },
+    { name: '小愿', qq: '3845546586', type: 'friend', avatarUrl: '' },
+];
+function handleClick(e, qq, type) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (type === 'group') {
+        const isMobile = /iPhone|Android/i.test(navigator.userAgent);
+        const groupUrls = isMobile ? [
+            `mqqapi://card/show_pslcard?src_type=internal&version=1&uin=${qq}&card_type=group&source=qrcode`
+        ] : [
+            `https://qun.qq.com/join/${qq}`
+        ];
+        let gIndex = 0;
+        function tryGroupNext() {
+            if (gIndex >= groupUrls.length) return;
+            const url = groupUrls[gIndex];
+            gIndex++;
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = url;
+            document.body.appendChild(iframe);
+            setTimeout(() => {
+                document.body.removeChild(iframe);
+                if (document.hidden) return;
+                if (gIndex < groupUrls.length) {
+                    setTimeout(tryGroupNext, 300);
+                }
+            }, 150);
+        }
+        tryGroupNext();
+        return;
+    }
+    
+    // 好友协议（按用户指定代码）
+    const isMobile = /iPhone|Android/i.test(navigator.userAgent);
+    const urls = isMobile ? [
+        `mqqapi://card/show_pslcard?src_type=internal&version=1&uin=${qq}&card_type=person&source=sharecard`
+    ] : [
+        `tencent://AddContact/?fromId=45&fromSubId=1&subcmd=all&uin=${qq}&website=AM`
+    ];
+    
+    // 逐个尝试
+    let index = 0;
+    function tryNext() {
+        if (index >= urls.length) return;
+        const url = urls[index];
+        index++;
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = url;
+        document.body.appendChild(iframe);
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+            if (document.hidden) return;
+            if (index < urls.length) {
+                setTimeout(tryNext, 300);
+            }
+        }, 150);
+    }
+    tryNext();
+}
+
+// ==================== 复制功能（已强化） ====================
+async function copyText(text) {
+    // 1. 优先使用现代 Clipboard API（仅在 HTTPS / localhost 可用）
+    if (navigator.clipboard && window.isSecureContext) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (err) {
+            console.warn('Clipboard API 失败，尝试降级:', err);
+        }
+    }
+
+    // 2. 可靠的降级方案（兼容 file://、HTTP、旧浏览器、iOS）
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');          // 防止键盘弹出
+        ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;z-index:-1;';
+        document.body.appendChild(ta);
+
+        // 兼容 iOS / 部分安卓
+        if (navigator.userAgent.match(/ipad|iphone/i)) {
+            const range = document.createRange();
+            range.selectNodeContents(ta);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            ta.setSelectionRange(0, text.length);
+        } else {
+            ta.select();
+            ta.setSelectionRange(0, text.length);
+        }
+
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+    } catch (err) {
+        console.error('复制失败:', err);
+        return false;
+    }
+}
+
+// 复制QQ号功能
+function copyQQ(qq, btn) {
+    if (!qq) {
+        showToast('该联系人暂无QQ号');
+        return;
+    }
+
+    copyText(qq).then(success => {
+        if (success) {
+            btn.classList.add('copied');
+            btn.textContent = '已复制';
+            showToast('QQ号已复制');
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.textContent = '复制号';
+            }, 1500);
+        } else {
+            showToast('复制失败，请手动长按复制');
+        }
+    });
+}
+
+// 复制成功提示
+function showToast(msg) {
+    let toast = document.querySelector('.copy-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.className = 'copy-toast';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 1200);
+}
+
+// 更新统计信息
+function updateStats(total) {
+    document.getElementById('stats').textContent = `共 ${total} 位预设po的联系`;
+}
+
+// 更新时间
+function updateTime() {
+    const now = new Date();
+    const options = { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit', 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit',
+        hour12: false 
+    };
+    const timeStr = now.toLocaleString('zh-CN', options).replace(/\//g, '-');
+    const timeEl = document.getElementById('currentTime');
+    if (timeEl) timeEl.textContent = timeStr;
+}
+
+// 初始化时间并每秒更新
+updateTime();
+setInterval(updateTime, 1000);
+
+// 搜索监听
+const searchHint = document.getElementById('searchHint');
+
+function toggleHint(keyword) {
+    if (searchHint) {
+        if (keyword) {
+            searchHint.classList.add('hint-hidden');
+        } else {
+            searchHint.classList.remove('hint-hidden');
+        }
+    }
+}
+
+document.getElementById('searchInput').addEventListener('input', function(e) {
+    const keyword = e.target.value.trim().toLowerCase();
+    toggleHint(keyword);
+    if (!keyword) { renderGroups(); renderFriends(); updateStats(contacts.length); return; }
+    const filtered = contacts.filter(c => 
+        c.name.toLowerCase().includes(keyword) || c.qq.includes(keyword)
+    );
+    const groups = filtered.filter(c => c.type === 'group');
+    const friends = filtered.filter(c => c.type === 'friend');
+    renderGroups(groups);
+    renderFriends(friends);
+    updateStats(filtered.length);
+});
+
+function renderGroups(data) {
+    const list = document.getElementById('groupList');
+    const section = document.getElementById('groupSection');
+    const count = document.getElementById('groupCount');
+    const groups = data || contacts.filter(c => c.type === 'group');
+    
+    count.textContent = `(${groups.length})`;
+    if (groups.length === 0) {
+        section.style.display = 'none';
+        list.innerHTML = '';
+        return;
+    }
+    section.style.display = 'flex';
+    list.innerHTML = groups.map(c => `
+        <a href="#" class="contact-card contact-card-group" onclick="handleClick(event, '\( {c.qq}', ' \){c.type}')">
+            <div class="shimmer-effect"></div>
+            <div class="avatar" style="background:linear-gradient(135deg,#667eea,#764ba2)">群</div>
+            <div class="contact-info">
+                <div class="contact-name">${c.name}</div>
+                <div class="contact-qq">${c.qq}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+                <div class="contact-action" onclick="event.stopPropagation();copyQQ('${c.qq}', this)">复制号</div>
+                <div class="contact-action">加入群聊 →</div>
+            </div>
+        </a>
+    `).join('');
+}
+
+function renderFriends(data) {
+    const list = document.getElementById('friendList');
+    const section = document.getElementById('friendSection');
+    const count = document.getElementById('friendCount');
+    const friends = data || contacts.filter(c => c.type === 'friend');
+    
+    count.textContent = `(${friends.length})`;
+    if (friends.length === 0) {
+        section.style.display = 'none';
+        list.innerHTML = '';
+        return;
+    }
+    section.style.display = 'flex';
+    list.innerHTML = friends.map(c => `
+        <a href="#" class="contact-card" onclick="handleClick(event, '\( {c.qq}', ' \){c.type}')">
+            <div class="shimmer-effect"></div>
+            <div class="avatar">\( {c.avatarUrl ? `<img src=" \){c.avatarUrl}" onerror="this.parentElement.innerHTML='<div class=\\'avatar-fallback\\'>\( {c.name.charAt(0)}</div>'">` : `<div class="avatar-fallback"> \){c.name.charAt(0)}</div>`}</div>
+            <div class="contact-info">
+                <div class="contact-name">\( {c.name} \){c.isHot ? '<span class="hot-tag">热门</span>' : ''}</div>
+                <div class="contact-qq">${c.qq || '暂无QQ号'}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+                <div class="contact-action" onclick="event.stopPropagation();copyQQ('${c.qq}', this)">复制号</div>
+                <div class="contact-action">添加好友 →</div>
+            </div>
+        </a>
+    `).join('');
+}
+
+// 初始化
+renderGroups();
+renderFriends();
+updateStats(contacts.length);
+</script>
+
+</body>
+</html>
